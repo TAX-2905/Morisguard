@@ -243,9 +243,10 @@ function AnalysisContent() {
               id="input"
               ref={taRef}
               value={text}
-              onInput={useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-                setText(e.target.value);
-                autoSize(e.currentTarget);
+              onInput={useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
+              const target = e.target as HTMLTextAreaElement; // Cast for safety
+              setText(target.value);
+              autoSize(e.currentTarget);
               }, [autoSize])}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
