@@ -379,7 +379,7 @@ useEffect(() => {
               <LayerCard 
                 title="Diksioner" 
                 icon={BookA} 
-                status={result.dictionary_match ? "unsafe" : "safe"} 
+                status={result.dictionary_match ? "unsafe" : "skipped"} // Change "safe" to "skipped"
                 details={result.dictionary_match && result.matched_words ? `Mot: ${result.matched_words.join(", ")}` : "Auken mot interdi detekte"}
               />
 
