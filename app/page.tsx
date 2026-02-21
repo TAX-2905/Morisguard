@@ -86,6 +86,8 @@ const LayerCard = memo(function LayerCard({
 
 function AnalysisContent() {
   const searchParams = useSearchParams();
+  const urlText = searchParams.get("text");
+  const urlData = searchParams.get("data");
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -154,18 +156,46 @@ function AnalysisContent() {
     }
   }, [postAnalyze, text]);
 
-  useEffect(() => {
-    const textFromUrl = searchParams.get("text");
-    if (textFromUrl) {
-      setText(textFromUrl);
-      setLoading(true);
-      postAnalyze(textFromUrl)
-        .then((data) => setResult(data))
-        .catch((err) => setError(err.message))
-        .finally(() => setLoading(false));
-      window.history.replaceState({}, '', '/');
+useEffect(() => {
+  if (urlText) {
+    // 1. Put the text in the input box visually
+    setText(urlText); 
+
+    // 2. CHECK: Did the extension pass pre-calculated data?
+    if (urlData) {
+      try {
+        const preCalculatedResult = JSON.parse(decodeURIComponent(urlData));
+        setResult(preCalculatedResult);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return; // Stop execution!
+      } catch (e) {
+        console.error("Failed to parse extension data, falling back to API fetch.");
+      }
     }
-  }, [searchParams, postAnalyze]); 
+
+    // 3. IF NO DATA WAS PASSED: Manually trigger the fetch using the URL text
+    const fetchFromUrl = async () => {
+      setLoading(true);
+      try {
+        // We pass urlText directly because the 'text' state hasn't updated yet!
+        const data = await postAnalyze(urlText); 
+        setResult(data);
+        lastAnalyzedTextRef.current = urlText;
+        
+        // Clean up the URL after a successful fetch too
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (e: any) {
+        if (e?.name !== "AbortError") {
+          setError(e?.message ? String(e.message) : "Erer inatandu pandan analiz");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFromUrl();
+  }
+}, [urlText, urlData, postAnalyze]); // Make sure to add postAnalyze to dependencies
 
   const resetAll = useCallback(() => {
     if (abortRef.current) abortRef.current.abort();
