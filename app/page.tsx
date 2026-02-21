@@ -361,15 +361,18 @@ useEffect(() => {
                 <h3 className="text-base font-bold text-rose-900 mb-2 flex items-center gap-2">
                   <AlertCircle size={18} /> Detay lor Analiz
                 </h3>
-                <p className="text-rose-800 leading-relaxed">
-				{result.dictionary_match 
-                    ? `Diksioner inn detekte enn ou plizir mot interdi: ${result.matched_words?.join(", ")}.` 
-                    : result.overall_label === "human_review"
-                    ? "Model ML inn detekte enn form toksisite, me Gemini AI pan trouv nanien mal. Bizin enn imin pou pran desizion final."
-                    : result.gemini_result === "unsafe" && result.gemini_explanation
-                    ? result.gemini_explanation
-                    : "Text la pa an sekirite."}
-                </p>
+<p className="text-rose-800 leading-relaxed">
+{result.dictionary_match 
+    ? `Diksioner inn detekte enn ou plizir mot interdi: ${result.matched_words?.join(", ")}.` 
+    // 1. If Gemini found something, ALWAYS show Gemini's explanation first
+    : result.gemini_result === "unsafe" && result.gemini_explanation
+    ? result.gemini_explanation
+    // 2. If Gemini is safe but ML found something (Human Review case)
+    : result.overall_label === "human_review" && result.model_result === "unsafe"
+    ? "Model ML inn detekte enn form toksisite, me Gemini AI pan trouv nanien mal. Bizin enn imin pou pran desizion final."
+    // 3. Failsafe
+    : "Text la pa an sekirite."}
+</p>
               </section>
             )}
 
