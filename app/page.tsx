@@ -93,10 +93,37 @@ function AnalysisContent() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [, startTransition] = useTransition();
+  
+  // ---> PASTE THE NEW STATE AND FUNCTION HERE <---
+  const [reported, setReported] = useState(false);
 
+  useEffect(() => {
+    setReported(false);
+  }, [text]);
+
+  const reportResult = async (suggested: string) => {
+    if (!result) return;
+    try {
+      await fetch("/api/report", {
+        method: "POST",
+        body: JSON.stringify({
+          text: text,
+          original_label: result.overall_label,
+          suggested_label: suggested,
+          language: result.detected_language
+        }),
+      });
+      setReported(true);
+    } catch (e) {
+      console.error("Failed to report:", e);
+    }
+  };
+  
   const lastAnalyzedTextRef = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
+  
+  const resultRef = useRef<HTMLDivElement>(null);
 
   const autoSize = useCallback((el: HTMLTextAreaElement | null) => {
     if (!el) return;
@@ -104,7 +131,7 @@ function AnalysisContent() {
     el.style.height = Math.min(el.scrollHeight, Math.floor(window.innerHeight * 0.85)) + "px";
   }, []);
 
-  useLayoutEffect(() => {
+useLayoutEffect(() => {
     autoSize(taRef.current);
   }, [autoSize, text]);
 
@@ -224,12 +251,13 @@ useEffect(() => {
   }, [text]);
 
 
-  useEffect(() => {
+useEffect(() => {
     if (result && !loading) {
       setTimeout(() => {
-        window.scrollTo({
-          top: document.documentElement.scrollHeight,
+        // Scrolls gently to the result container instead of the footer
+        resultRef.current?.scrollIntoView({
           behavior: "smooth",
+          block: "nearest", // "nearest" just brings it into view. You can also try "center".
         });
       }, 100);
     }
@@ -353,7 +381,7 @@ useEffect(() => {
         )}
 
         {result && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div ref={resultRef} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             
             {/* ROW 2: Reason for Toxicity (Only shown if toxic/has explanation or ML flagged it) */}
             {(result.dictionary_match || result.gemini_explanation || (result.model_result === "unsafe" && result.gemini_result === "safe")) && result.overall_label !== "safe" && (
@@ -407,6 +435,33 @@ useEffect(() => {
               />
 
             </section>
+			
+			{result && !reported && (
+              <div className="mt-8 rounded-2xl bg-white/40 p-6 border border-zinc-200 text-center">
+                <p className="text-sm font-medium text-zinc-600 mb-4">Eski sa rezilta la korek?</p>
+                <div className="flex justify-center gap-4">
+                  <button 
+                    onClick={() => reportResult(result.overall_label === 'safe' ? 'unsafe' : 'safe')}
+                    className="text-xs font-semibold text-rose-600 hover:underline"
+                  >
+                    Non, li pa bon
+                  </button>
+                  <button 
+                    onClick={() => setReported(true)}
+                    className="text-xs font-semibold text-emerald-600 hover:underline"
+                  >
+                    Wi, li korek
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {reported && (
+              <div className="mt-8 text-center text-sm font-medium text-zinc-500 italic">
+                Merci pou ou feedback! Sa pou aide nou amelior MorisGuard.
+              </div>
+            )}
+			
           </div>
         )}
 
