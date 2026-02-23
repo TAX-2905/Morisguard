@@ -97,10 +97,6 @@ function AnalysisContent() {
   // ---> PASTE THE NEW STATE AND FUNCTION HERE <---
   const [reported, setReported] = useState(false);
 
-  useEffect(() => {
-    setReported(false);
-  }, [text]);
-
   const reportResult = async (suggested: string) => {
     if (!result) return;
     try {
@@ -163,6 +159,7 @@ useLayoutEffect(() => {
     if (!text.trim()) return;
     setLoading(true);
     setError(null);
+	setReported(false);
 
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
@@ -188,11 +185,17 @@ useEffect(() => {
     // 1. Put the text in the input box visually
     setText(urlText); 
 
-    // 2. CHECK: Did the extension pass pre-calculated data?
+// 2. CHECK: Did the extension pass pre-calculated data?
     if (urlData) {
       try {
         const preCalculatedResult = JSON.parse(decodeURIComponent(urlData));
         setResult(preCalculatedResult);
+        
+        // <-- ADD THIS IF STATEMENT -->
+        if (preCalculatedResult.user_reported) {
+          setReported(true);
+        }
+        
         window.history.replaceState({}, document.title, window.location.pathname);
         return; // Stop execution!
       } catch (e) {
@@ -229,6 +232,7 @@ useEffect(() => {
     setText("");
     setResult(null);
     setError(null);
+	setReported(false);
     lastAnalyzedTextRef.current = null;
   }, []);
 
@@ -304,6 +308,7 @@ useEffect(() => {
               onInput={useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
               const target = e.target as HTMLTextAreaElement; // Cast for safety
               setText(target.value);
+			  setReported(false);
               autoSize(e.currentTarget);
               }, [autoSize])}
               onKeyDown={(e) => {
