@@ -308,8 +308,11 @@ useEffect(() => {
               onInput={useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
               const target = e.target as HTMLTextAreaElement; // Cast for safety
               setText(target.value);
-			  setReported(false);
-              autoSize(e.currentTarget);
+			  setResult(null);      // Removes the "Safe/Unsafe" cards
+			  setError(null);       // Clears any old error messages
+			  setReported(false);   // Resets the feedback buttons
+			  lastAnalyzedTextRef.current = null; // Forces the logic to recognize this as new text
+			  autoSize(e.currentTarget);
               }, [autoSize])}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -455,7 +458,7 @@ useEffect(() => {
                     onClick={() => setReported(true)}
                     className="text-xs font-semibold text-emerald-600 hover:underline"
                   >
-                    Wi, li korek
+                    Oui, li korek
                   </button>
                 </div>
               </div>
