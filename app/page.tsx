@@ -430,7 +430,7 @@ useEffect(() => {
                   result.dictionary_match 
                     ? "Model in ignore akoz diksioner in blok li avan." 
                     : result.model_result === "skipped"
-                    ? `Ignore: Langaz ${result.detected_language === 'english' ? 'Angle' : 'Franse'} detekte. Zis Gemini in servi.`
+                    ? `Ignore: Langaz ${result.detected_language === 'english' ? 'Anglais' : 'Francais'} detekte. Zis Gemini in servi.`
                     : "Rezilta depi MorisGuard Model."
                 }
               />

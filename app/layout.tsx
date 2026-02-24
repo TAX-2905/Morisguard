@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "MorisGuard",
-  description: "Test Version ONLY",
+  description: "Protecting Mauritian digital spaces. A specialized tool for detecting toxic language in Mauritian Creole with AI analysis.",
 };
 
 export default function RootLayout({
