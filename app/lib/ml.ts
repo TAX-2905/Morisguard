@@ -44,7 +44,7 @@ export async function checkCustomModel(text: string): Promise<MLModelResult> {
     // 4. Safe fallback if the Python server is offline or fails
     return {
       label: "safe",
-      confidence: 0 
+      confidence: 0, 
 	  toxic_words: []
     }; 
   }
