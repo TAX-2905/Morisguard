@@ -13,7 +13,7 @@ import React, {
 } from "react";
 import { 
   Wand2, XCircle, Loader2, ShieldCheck, ShieldAlert, 
-  AlertCircle, BookA, Bot, Sparkles, Languages 
+  AlertCircle, BookA, Bot, Sparkles, Languages, Lightbulb 
 } from "lucide-react";
 import type { AnalysisResult } from "@/app/lib/schema";
 
@@ -43,12 +43,14 @@ const LayerCard = memo(function LayerCard({
   title,
   icon: Icon,
   status,
-  details
+  details,
+  confidence 
 }: {
   title: string;
   icon: React.ElementType;
   status?: "safe" | "unsafe" | "skipped";
   details?: string;
+  confidence?: number; 
 }) {
   let badgeStyle = "bg-zinc-100 text-zinc-500";
   let statusText = "An atant";
@@ -71,9 +73,19 @@ const LayerCard = memo(function LayerCard({
           <Icon size={18} className="text-zinc-500" />
           {title}
         </div>
-        <span className={`px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider ${badgeStyle}`}>
-          {statusText}
-        </span>
+        
+        {/* UPDATED: Confidence text now looks much better */}
+        <div className="flex items-center gap-2">
+          {confidence !== undefined && status !== "skipped" && (
+            <span className="text-[11px] font-medium text-zinc-500">
+              Confidence: <span className="font-bold text-zinc-900">{confidence}%</span>
+            </span>
+          )}
+          <span className={`px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider ${badgeStyle}`}>
+            {statusText}
+          </span>
+        </div>
+
       </div>
       {details && (
         <div className="mt-auto pt-3 border-t border-black/20 text-sm text-zinc-800">
@@ -85,6 +97,7 @@ const LayerCard = memo(function LayerCard({
 });
 
 function AnalysisContent() {
+  const [suggestionApplied, setSuggestionApplied] = useState(false);
   const searchParams = useSearchParams();
   const urlText = searchParams.get("text");
   const urlData = searchParams.get("data");
@@ -155,21 +168,32 @@ useLayoutEffect(() => {
     []
   );
 
-  const analyze = useCallback(async () => {
-    if (!text.trim()) return;
+const analyze = useCallback(async (overrideText?: string | React.MouseEvent | React.KeyboardEvent) => {
+    // 1. Get the exact text from the UI (with all the accents and original typing)
+    const rawText = typeof overrideText === "string" ? overrideText : text;
+    
+    if (!rawText.trim()) return;
+
+    // 2. NEW: Silent NLP Text Preprocessing (Backend only!)
+    // Strips accents (été -> ete, là -> la) without changing the UI text
+    const processedText = rawText.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    
     setLoading(true);
+    setResult(null); 
     setError(null);
-	setReported(false);
+    setReported(false);
 
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
     try {
-      const data = await postAnalyze(text, controller);
+      // 3. Send the PROCESSED text to the API
+      const data = await postAnalyze(processedText, controller);
       startTransition(() => {
         setResult(data);
-        lastAnalyzedTextRef.current = text;
+        // 4. Track the RAW text so it knows not to re-run if they click Analyze twice
+        lastAnalyzedTextRef.current = rawText;
       });
     } catch (e: any) {
       if (e?.name !== "AbortError") {
@@ -227,33 +251,15 @@ useEffect(() => {
   }
 }, [urlText, urlData, postAnalyze]); // Make sure to add postAnalyze to dependencies
 
-  const resetAll = useCallback(() => {
+	const resetAll = useCallback(() => {
     if (abortRef.current) abortRef.current.abort();
     setText("");
     setResult(null);
     setError(null);
-	setReported(false);
+    setReported(false);
+    setSuggestionApplied(false); // <-- UNLOCKS here when you click Reffacer
     lastAnalyzedTextRef.current = null;
   }, []);
-
-  useEffect(() => {
-    if (!lastAnalyzedTextRef.current || text === lastAnalyzedTextRef.current) return;
-    if (abortRef.current) abortRef.current.abort();
-    setLoading(false);
-    setResult(null);
-    setError(null);
-    lastAnalyzedTextRef.current = null;
-  }, [text]);
-  
-  useEffect(() => {
-    if (!lastAnalyzedTextRef.current || text === lastAnalyzedTextRef.current) return;
-    if (abortRef.current) abortRef.current.abort();
-    setLoading(false);
-    setResult(null);
-    setError(null);
-    lastAnalyzedTextRef.current = null;
-  }, [text]);
-
 
 useEffect(() => {
     if (result && !loading) {
@@ -301,19 +307,19 @@ useEffect(() => {
             <label htmlFor="input" className="block text-sm font-medium text-zinc-700 mb-2">
               Paragraph
             </label>
-            <textarea
+<textarea
               id="input"
               ref={taRef}
               value={text}
-              onInput={useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
-              const target = e.target as HTMLTextAreaElement; // Cast for safety
-              setText(target.value);
-			  setResult(null);      // Removes the "Safe/Unsafe" cards
-			  setError(null);       // Clears any old error messages
-			  setReported(false);   // Resets the feedback buttons
-			  lastAnalyzedTextRef.current = null; // Forces the logic to recognize this as new text
-			  autoSize(e.currentTarget);
-              }, [autoSize])}
+              onInput={(e) => {
+                setText(e.currentTarget.value);
+                setResult(null);      
+                setError(null);       
+                setReported(false);   
+                setSuggestionApplied(false); // <-- UNLOCKS here when you type
+                lastAnalyzedTextRef.current = null; 
+                autoSize(e.currentTarget);
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -323,7 +329,30 @@ useEffect(() => {
               placeholder="Met 1 text ici pou analizer…"
               className="w-full h-auto min-h-[12vh] rounded-2xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900/10 focus:outline-none p-4 bg-white/50 text-[16px] leading-7 resize-none"
             />
-
+			
+{/* SUGGESTION BANNER */}
+            {result?.suggested_correction && 
+             result.suggested_correction.toLowerCase() !== text.toLowerCase() && 
+             !suggestionApplied && ( // <-- Only show if the lock is FALSE
+              <div className="mt-3 flex items-start gap-2 rounded-xl bg-white shadow-sm border-[0.5px] border-zinc-200 p-3 text-sm transition-all duration-300">
+                <Lightbulb size={18} className="mt-0.5 shrink-0 text-black" />
+                <div>
+                  <span className="font-medium text-zinc-600">Commentaire Amelyorer: </span>
+                  <button 
+                    onClick={() => {
+                      const newText = result.suggested_correction!;
+                      setSuggestionApplied(true); // <-- LOCKS IT! Won't show again.
+                      setText(newText);   
+                      analyze(newText);   
+                    }}
+                    // CHANGED HERE: Removed animate-hard-blink and added animate-pulse drop-shadow-sm
+                    className="font-bold hover:underline italic text-black text-left ml-1 animate-pulse hover:animate-none drop-shadow-sm"
+                  >
+                    "{result.suggested_correction}"
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <button
                 onClick={analyze}
@@ -368,12 +397,17 @@ useEffect(() => {
                 <Languages size={18} />
                 <span className="text-xs font-semibold uppercase tracking-wider">Langaz Detekte</span>
               </div>
-              <div className="text-xl font-bold text-zinc-800 capitalize">
+<div className="text-xl font-bold text-zinc-800 capitalize">
                 {result && result.detected_language 
-                  ? (result.detected_language === 'creole' ? 'Kreol' 
-                    : result.detected_language === 'french' ? 'Francais' 
-                    : result.detected_language === 'english' ? 'Anglais' 
-                    : result.detected_language)
+                  ? result.detected_language
+                      .split(',')
+                      .map(lang => lang.trim().toLowerCase())
+                      .map(lang => 
+                        lang === 'creole' ? 'Kreol' : 
+                        lang === 'french' ? 'Francais' : 
+                        lang === 'english' ? 'Anglais' : lang
+                      )
+                      .join(' & ')
                   : "---"}
               </div>
             </section>
@@ -412,25 +446,34 @@ useEffect(() => {
               </section>
             )}
 
-            {/* ROW 3: The 3 Layer Cards Side-by-Side */}
+{/* ROW 3: The 3 Layer Cards Side-by-Side */}
             <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
               
               <LayerCard 
                 title="Diksioner" 
                 icon={BookA} 
-                status={result.dictionary_match ? "unsafe" : "skipped"} // Change "safe" to "skipped"
+                status={result.dictionary_match ? "unsafe" : "skipped"} 
                 details={result.dictionary_match && result.matched_words ? `Mot: ${result.matched_words.join(", ")}` : "Auken mot interdi detekte"}
               />
 
-              <LayerCard 
+			    <LayerCard 
                 title="Model ML" 
                 icon={Bot} 
                 status={result.dictionary_match ? "skipped" : result.model_result || "safe"} 
+                confidence={result.ml_confidence}
                 details={
                   result.dictionary_match 
                     ? "Model in ignore akoz diksioner in blok li avan." 
                     : result.model_result === "skipped"
-                    ? `Ignore: Langaz ${result.detected_language === 'english' ? 'Anglais' : 'Francais'} detekte. Zis Gemini in servi.`
+                    ? `Ignore: Langaz ${
+                        result.detected_language
+                          ?.split(',')
+                          .map(lang => lang.trim().toLowerCase())
+                          .map(lang => lang === 'english' ? 'Anglais' : lang === 'french' ? 'Francais' : lang)
+                          .join(' & ')
+                      } detekte. Zis Gemini in servi.`
+                    : result.model_result === "unsafe" && result.ml_toxic_words && result.ml_toxic_words.length > 0
+                    ? `Mot(s) flagged: ${result.ml_toxic_words.join(", ")}` // <-- Shows the SHAP words!
                     : "Rezilta depi MorisGuard Model."
                 }
               />
@@ -439,7 +482,8 @@ useEffect(() => {
                 title="Gemini AI" 
                 icon={Sparkles} 
                 status={result.dictionary_match ? "skipped" : result.gemini_result || "safe"} 
-                details={result.dictionary_match ? "Gemini in ignore akoz diksioner in blok li avan." : "Analiz LLM."}
+                confidence={result.gemini_confidence}
+                details={result.dictionary_match ? "Gemini in ignore akoz diksioner in blok li avan." : "Analiz LLM"}
               />
 
             </section>

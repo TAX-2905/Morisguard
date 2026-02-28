@@ -6,46 +6,38 @@ import { checkCustomModel } from "@/app/lib/ml";
 import { checkGemini } from "@/app/lib/llm";
 import { supabase } from "@/app/lib/supabase";
 
-// --- NEW HELPER FUNCTION FOR SENTENCE CASING ---
-function toSentenceCase(str: string): string {
-  return str
-    .toLowerCase()
-    // FIX: Removed the unnecessary backslashes inside the square brackets [.!?]
-    .replace(/(^\s*\p{L}|[.!?]\s*\p{L})/gu, (char) => char.toUpperCase());
-}
-
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const rawText = body.text || "";
 
     // ------------------------------------------------------------------
-    // SANITIZATION LAYER: Remove Emojis & Apply Sentence Case
+    // SANITIZATION LAYER: Lowercase, Remove Emojis & Remove Punctuation
     // ------------------------------------------------------------------
-    const noEmojiText = rawText
-      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "")
+    const text = rawText
+      .toLowerCase()                                                      // 1. Force small letters
+      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "") // 2. Remove emojis
+      .replace(/[^\p{L}\p{N}\s]/gu, "")                                   // 3. Remove punctuation
+      .replace(/\s{2,}/g, " ")                                            // 4. Shrink double spaces
       .trim();
-
-    // Apply the sentence casing rule
-    const text = toSentenceCase(noEmojiText);
 
     if (!text) {
       return NextResponse.json(
-        { error: "Text is empty or contains only emojis." }, 
+        { error: "Text is empty or contains only emojis/punctuation." }, 
         { status: 400 }
       );
     }
-
+    
     // ------------------------------------------------------------------
     // LAYER 1: Dictionary Check (Fast fail)
     // ------------------------------------------------------------------
     const matchedWords = checkDictionary(text);
 
     if (matchedWords.length > 0) {
-      
       // LOG TO SUPABASE BEFORE RETURNING
       await supabase.from('search_logs').insert([{
-        searched_text: text, // Will log as: "Frer mn plein dn mo lavi. Mo p envi al drmi"
+        raw_text: rawText,       // <-- What the user typed
+        searched_text: text,     // <-- Cleaned text
         detected_language: "creole",
         toxicity_result: "unsafe"
       }]);
@@ -58,54 +50,70 @@ export async function POST(req: Request) {
       });
     }
 
-    // 2 & 3. Run Models in Parallel
-const [modelResultRaw, geminiResponse] = await Promise.all([
+    // ------------------------------------------------------------------
+    // LAYER 2 & 3: Run Models in Parallel
+    // ------------------------------------------------------------------
+    // Catch the objects returned by the updated models
+    const [mlResponse, geminiResponse] = await Promise.all([
       checkCustomModel(text),
       checkGemini(text)
     ]);
 
-    const geminiResultLabel = geminiResponse.is_toxic ? "unsafe" : "safe";
+    // Extract labels and confidence scores
+    const modelResultLabel = mlResponse.label;
+    const mlConfidence = mlResponse.confidence;
+	const mlToxicWords = mlResponse.toxic_words;
     
-    // --- UPDATED LOGIC HERE ---
-    // Instead of checking if it IS creole, we check if it IS NOT English or French.
-    // This forces everything else into the "creole" category logic.
-    const isStandardForeign = geminiResponse.detected_language === "french" || geminiResponse.detected_language === "english";
-    const finalDetectedLanguage = isStandardForeign ? geminiResponse.detected_language : "creole";
+    const geminiResultLabel = geminiResponse.is_toxic ? "unsafe" : "safe";
+    const geminiConfidence = geminiResponse.confidence_score;
+    
+    // --- LANGUAGE ROUTING LOGIC ---
+    const detectedLangStr = geminiResponse.detected_language.toLowerCase();
+    const hasCreole = detectedLangStr.includes("creole");
+    
+    const finalDetectedLanguage = detectedLangStr || "creole";
 
     let overall_label: "safe" | "unsafe" | "human_review" = "safe";
-    let final_model_result: "safe" | "unsafe" | "skipped" = modelResultRaw;
+    let final_model_result: "safe" | "unsafe" | "skipped" = modelResultLabel;
 
-    if (isStandardForeign) {
-      // If it's English/French, we skip the Custom ML result and trust Gemini
+    if (!hasCreole) {
+      // If it DOES NOT contain Creole, skip ML
       final_model_result = "skipped";
       overall_label = geminiResultLabel;
     } else {
-      // If it's NOT English/French (Defaulting to Creole), we compare both results
-      if (modelResultRaw === "unsafe" && geminiResultLabel === "unsafe") {
+      // If it DOES contain Creole, compare both results
+      if (modelResultLabel === "unsafe" && geminiResultLabel === "unsafe") {
         overall_label = "unsafe";
-      } else if (modelResultRaw === "safe" && geminiResultLabel === "safe") {
+      } else if (modelResultLabel === "safe" && geminiResultLabel === "safe") {
         overall_label = "safe";
       } else {
         overall_label = "human_review";
       }
     }
 
-    // LOG TO SUPABASE
+    // ------------------------------------------------------------------
+    // FINAL LOG TO SUPABASE
+    // ------------------------------------------------------------------
     await supabase.from('search_logs').insert([{
-      searched_text: text,
-      detected_language: finalDetectedLanguage, // Uses our "forced" creole default
+      raw_text: rawText,         // <-- What the user typed
+      searched_text: text,       // <-- Cleaned text
+      detected_language: finalDetectedLanguage,
       toxicity_result: overall_label
     }]);
 
-    return NextResponse.json<AnalysisResult>({
+	  return NextResponse.json<AnalysisResult>({
       overall_label,
       dictionary_match: false,
       model_result: final_model_result,
       gemini_result: geminiResultLabel,
       gemini_explanation: geminiResponse.explanation,
-      detected_language: finalDetectedLanguage // Sends "creole" to the frontend if not En/Fr
+      detected_language: finalDetectedLanguage,
+      ml_confidence: mlConfidence,
+      ml_toxic_words: mlToxicWords,         // <-- 2. Send to frontend!
+      gemini_confidence: geminiConfidence,
+	  suggested_correction: geminiResponse.suggested_correction
     });
-	
+    
   } catch (error) {
     console.error("API Error:", error);
     return NextResponse.json(
