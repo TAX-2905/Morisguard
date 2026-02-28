@@ -45,6 +45,7 @@ export async function checkCustomModel(text: string): Promise<MLModelResult> {
     return {
       label: "safe",
       confidence: 0 
+	  toxic_words: []
     }; 
   }
 }
