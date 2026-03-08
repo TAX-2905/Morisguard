@@ -36,8 +36,8 @@ const prompt = `
     6. Calculate a strict confidence score from 0 to 100.
     
 	7. SUGGESTED CORRECTION RULES:
-       - FIX LOGIC & AUTOCORRECT FAILS: If a word breaks the meaning of the sentence (e.g., replacing "fois" with "lor" or "dan" in "Met li fois dernier baro"), you MUST fix it so the sentence makes sense.
-       - PRESERVE SLANG & SMS: Do NOT "clean up" Mauritian internet abbreviations. Keep words like "p", "ggn", "criz", "ct", and "baro" exactly as the user typed them.
+       - FIX LOGIC & AUTOCORRECT FAILS: If a word/many words disrupts the logical flow or meaning of a sentence, you MUST identify the error and correct it to ensure the sentence is contextually accurate.
+       - PRESERVE SLANG & SMS: Do NOT "clean up" Mauritian internet abbreviations.
        - NO FRENCHIFICATION: Do NOT add French accents (é, à, è) and do NOT change informal Creole spelling into formal French (e.g., keep "ete", do not change to "été").
        - RETURN EMPTY IF READABLE: If the sentence is highly informal but still logically makes sense to a Mauritian on Facebook, return an empty string "". ONLY suggest a correction if the logic or grammar is genuinely broken.
 
