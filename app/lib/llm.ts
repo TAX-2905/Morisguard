@@ -36,7 +36,7 @@ const prompt = `
     6. Calculate a strict confidence score from 0 to 100.
     
 	7. SUGGESTED CORRECTION RULES:
-       - FIX LOGIC & AUTOCORRECT FAILS: If a word/many words disrupts the logical flow or meaning of a sentence, you MUST identify the error and correct it to ensure the sentence is contextually accurate.
+       - FIX LOGIC & AUTOCORRECT FAILS: Ensure the sentence makes sense to a human. You can add/change words to make it better so that it can be easily be read by a human.
        - PRESERVE SLANG & SMS: Do NOT "clean up" Mauritian internet abbreviations.
        - NO FRENCHIFICATION: Do NOT add French accents (é, à, è) and do NOT change informal Creole spelling into formal French (e.g., keep "ete", do not change to "été").
        - RETURN EMPTY IF READABLE: If the sentence is highly informal but still logically makes sense to a Mauritian on Facebook, return an empty string "". ONLY suggest a correction if the logic or grammar is genuinely broken.
