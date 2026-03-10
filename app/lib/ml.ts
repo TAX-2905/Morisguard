@@ -1,18 +1,13 @@
-// app/lib/ml.ts
-
-// Fallback to localhost if the environment variable isn't set
 const ML_API_URL = process.env.PYTHON_ML_API_URL || "http://127.0.0.1:8000";
 
-// 1. Define the new return type so TypeScript knows what to expect
 export interface MLModelResult {
   label: "safe" | "unsafe";
   confidence: number;
-  toxic_words: string[]; // <-- ADD THIS
+  toxic_words: string[]; 
 }
 
 export async function checkCustomModel(text: string): Promise<MLModelResult> {
   try {
-    // Combine the base URL with your /predict endpoint
     const response = await fetch(`${ML_API_URL}/predict`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

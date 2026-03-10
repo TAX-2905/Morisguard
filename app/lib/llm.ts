@@ -40,6 +40,7 @@ const prompt = `
        - PRESERVE SLANG & SMS: Do NOT "clean up" Mauritian internet abbreviations.
        - NO FRENCHIFICATION: Do NOT add French accents (é, à, è) and do NOT change informal Creole spelling into formal French (e.g., keep "ete", do not change to "été").
        - RETURN EMPTY IF READABLE: If the sentence is highly informal but still logically makes sense to a Mauritian on Facebook, return an empty string "". ONLY suggest a correction if the logic or grammar is genuinely broken.
+       - RETURN EMPTY IF CONTAIN English ONLY, French ONLY or mixture of English and French ONLY : If the sentence is in English ONLY, French ONLY or mixture of English and French ONLY, return empty and do not provide any suggestion.
 
     Text to analyze: "${text}"
     

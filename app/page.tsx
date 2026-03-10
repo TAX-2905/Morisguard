@@ -206,22 +206,19 @@ const analyze = useCallback(async (overrideText?: string | React.MouseEvent | Re
 
 useEffect(() => {
   if (urlText) {
-    // 1. Put the text in the input box visually
     setText(urlText); 
 
-// 2. CHECK: Did the extension pass pre-calculated data?
     if (urlData) {
       try {
         const preCalculatedResult = JSON.parse(decodeURIComponent(urlData));
         setResult(preCalculatedResult);
         
-        // <-- ADD THIS IF STATEMENT -->
         if (preCalculatedResult.user_reported) {
           setReported(true);
         }
         
         window.history.replaceState({}, document.title, window.location.pathname);
-        return; // Stop execution!
+        return; 
       } catch (e) {
         console.error("Failed to parse extension data, falling back to API fetch.");
       }
@@ -280,7 +277,6 @@ useEffect(() => {
     return "bg-white/80 border-emerald-200 text-emerald-800 shadow-sm";
   }, [result]);
 
-  // DYNAMIC BACKGROUND CONTROL FOR THE ENTIRE PAGE
   const mainBgStyle = useMemo(() => {
     if (!result) return "bg-zinc-100"; 
     if (result.overall_label === "unsafe") return "bg-rose-200"; 
