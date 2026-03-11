@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     const geminiResultLabel = geminiResponse.is_toxic ? "unsafe" : "safe";
     const geminiConfidence = geminiResponse.confidence_score;
     
-    // --- LANGUAGE ROUTING LOGIC ---
+// --- LANGUAGE ROUTING LOGIC ---
     const detectedLangStr = geminiResponse.detected_language.toLowerCase();
     const hasCreole = detectedLangStr.includes("creole");
     
@@ -80,6 +80,10 @@ export async function POST(req: Request) {
       // If it DOES NOT contain Creole, skip ML
       final_model_result = "skipped";
       overall_label = geminiResultLabel;
+      
+      // 🛑 NEW: HARD GUARDRAIL
+      // If no Creole is detected, absolutely do not send a suggestion.
+      geminiResponse.suggested_correction = ""; 
     } else {
       // If it DOES contain Creole, compare both results
       if (modelResultLabel === "unsafe" && geminiResultLabel === "unsafe") {
@@ -90,7 +94,6 @@ export async function POST(req: Request) {
         overall_label = "human_review";
       }
     }
-
     // ------------------------------------------------------------------
     // FINAL LOG TO SUPABASE
     // ------------------------------------------------------------------

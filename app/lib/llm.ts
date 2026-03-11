@@ -35,12 +35,13 @@ const prompt = `
     5. The explanation MUST be written exclusively in ENGLISH.
     6. Calculate a strict confidence score from 0 to 100.
     
-	7. SUGGESTED CORRECTION RULES:
-       - FIX LOGIC & AUTOCORRECT FAILS: Ensure the sentence makes sense to a human. You can add/change words to make it better so that it can be easily be read by a human.
-       - PRESERVE SLANG & SMS: Do NOT "clean up" Mauritian internet abbreviations.
-       - NO FRENCHIFICATION: Do NOT add French accents (é, à, è) and do NOT change informal Creole spelling into formal French (e.g., keep "ete", do not change to "été").
-       - RETURN EMPTY IF READABLE: If the sentence is highly informal but still logically makes sense to a Mauritian on Facebook, return an empty string "". ONLY suggest a correction if the logic or grammar is genuinely broken.
-       - RETURN EMPTY IF CONTAIN English ONLY, French ONLY or mixture of English and French ONLY : If the sentence is in English ONLY, French ONLY or mixture of English and French ONLY, return empty and do not provide any suggestion.
+    7. STRICT SUGGESTED CORRECTION RULES:
+       - ONLY FIX CREOLE: If the text is a mix of Creole and English/French, you MUST ONLY correct the Creole words. 
+       - IGNORE OTHER LANGUAGES: You MUST copy the exact English and French words verbatim without any grammatical corrections.
+       - RETURN EMPTY FOR NON-CREOLE: If the text is 100% English, 100% French, or a mix of ONLY English and French, you MUST return an empty string "".
+       - RETURN EMPTY IF READABLE: If the Creole is highly informal but logically makes sense to a Mauritian, return an empty string "".
+       - PRESERVE SLANG: Do NOT "clean up" Mauritian internet abbreviations (e.g., keep "fkl", "bz").
+       - NO FRENCHIFICATION: Do NOT add French accents or change informal Creole into formal French (e.g., keep "ete", do not change to "été").
 
     Text to analyze: "${text}"
     
