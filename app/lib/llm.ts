@@ -15,7 +15,7 @@ export interface GeminiResult {
 export async function checkGemini(text: string): Promise<GeminiResult> {
   try {
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash", // Note: Ensure you are using a valid model name like gemini-2.0-flash
+      model: "gemini-2.5-flash", // Note: Ensure you are using a valid model name like gemini-2.0-flash
       generationConfig: {
         temperature: 0,
         responseMimeType: "application/json",
