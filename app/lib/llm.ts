@@ -44,6 +44,8 @@ const prompt = `
        - NO FRENCHIFICATION: Do NOT add French accents or change informal Creole into formal French (e.g., keep "ete", do not change to "été").
 
     Text to analyze: "${text}"
+
+    Try your best to fix the kreol part to the maximum possible so that it can be read better. Always try to give a suggestion to fix the sentence.
     
     Respond ONLY in valid JSON format matching this exact structure:
     {
